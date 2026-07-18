@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minha assinatura — Palpite da Vez</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--bg:#07100c;--green:#22c55e;--line:rgba(255,255,255,0.08);--gold:#e8c46a}
+  body{background:var(--bg);color:#f3f5f4;font-family:'Inter',system-ui,-apple-system,sans-serif}
+  .glass{background:rgba(255,255,255,0.035);backdrop-filter:blur(16px);border:1px solid var(--line)}
+  .btn-primary{background:var(--green);color:#04150a;font-weight:700;transition:.2s}
+  .btn-primary:hover{background:#3fdc7a}
+  .btn-ghost{border:1px solid var(--line);color:#f3f5f4;transition:.2s}
+  .btn-ghost:hover{border-color:var(--green);color:var(--green)}
+  .progress-bar{height:8px;background:rgba(255,255,255,0.08);border-radius:99px;overflow:hidden}
+  .progress-fill{height:100%;background:linear-gradient(90deg,#22c55e,#3fdc7a);transition:width .5s ease}
+  .status-pill{font-size:.7rem;font-weight:600;padding:.3rem .7rem;border-radius:99px;letter-spacing:.02em}
+  .st-ativa{background:rgba(34,197,94,0.15);color:#4ade80}
+  .st-vencida{background:rgba(239,68,68,0.15);color:#f87171}
+  .st-aguardando{background:rgba(234,179,8,0.15);color:#facc15}
+  input{background:rgba(255,255,255,0.05);border:1px solid var(--line);color:#f3f5f4}
+  input:focus{outline:none;border-color:var(--green)}
+  @keyframes pulseRing{0%{transform:scale(.8);opacity:.6}70%{transform:scale(1.4);opacity:0}100%{opacity:0}}
+  @keyframes popIn{0%{transform:scale(0)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+  @keyframes drawCheck{to{stroke-dashoffset:0}}
+  .pulse-ring{position:absolute;inset:0;border-radius:9999px;border:2px solid var(--green);animation:pulseRing 1.8s ease-out infinite}
+  .check-circle{animation:popIn .5s cubic-bezier(.2,1.4,.4,1) both}
+  .check-path{stroke-dasharray:40;stroke-dashoffset:40;animation:drawCheck .5s .3s ease forwards}
+</style>
+</head>
+<body class="min-h-screen px-6 py-16">
+
+<div id="loading" class="max-w-lg mx-auto text-center py-24">
+  <div class="animate-spin h-8 w-8 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+  <p class="text-gray-400 text-sm">Carregando sua assinatura...</p>
+</div>
+
+<div id="painel" class="hidden max-w-lg mx-auto">
+  <div class="flex items-center justify-between mb-8">
+    <a href="index.html" class="font-bold text-lg">👑 Palpite<span class="text-green-400">DaVez</span></a>
+    <button onclick="sair()" class="text-xs text-gray-400 hover:text-red-400 transition">Sair</button>
+  </div>
+
+  <h1 class="text-2xl font-bold mb-1">Olá, <span id="nomeUsuario" class="text-green-400"></span></h1>
+  <p class="text-gray-500 text-sm mb-8">Aqui está o resumo da sua assinatura VIP.</p>
+
+  <div class="glass rounded-2xl p-7 mb-6">
+    <div class="flex items-center justify-between mb-5">
+      <div>
+        <p class="text-xs text-gray-400">Plano atual</p>
+        <p class="font-semibold text-lg">VIP Mensal</p>
+      </div>
+      <span id="statusPill" class="status-pill">—</span>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4 text-sm mb-5">
+      <div>
+        <p class="text-xs text-gray-400">Data da contratação</p>
+        <p id="dataContratacao" class="font-medium">—</p>
+      </div>
+      <div>
+        <p class="text-xs text-gray-400">Vencimento</p>
+        <p id="dataVencimento" class="font-medium">—</p>
+      </div>
+    </div>
+
+    <div class="mb-2 flex items-center justify-between text-xs text-gray-400">
+      <span id="diasRestantesLabel">—</span>
+      <span id="diasRestantesNum">—</span>
+    </div>
+    <div class="progress-bar"><div id="progressFill" class="progress-fill" style="width:0%"></div></div>
+  </div>
+
+  <div id="alertaAssinatura" class="hidden rounded-xl p-4 mb-6 text-sm"></div>
+
+  <!-- CARD STATUS DO GRUPO VIP -->
+  <div id="cardGrupo" class="hidden glass rounded-2xl p-6 mb-6">
+    <div id="grupoAguardando" class="hidden">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="text-lg">👑</span>
+        <h3 class="font-semibold">Acesso ao Grupo VIP</h3>
+      </div>
+      <p class="text-yellow-400 text-xs font-semibold mb-2">⏳ Aguardando inclusão</p>
+      <p class="text-gray-400 text-sm mb-1">Recebemos seu pagamento com sucesso. Nossa equipe adicionará você ao Grupo VIP em até 24 horas.</p>
+      <p id="grupoAtrasoMsg" class="hidden text-gray-400 text-sm mt-3">Caso ainda não tenha sido adicionado após 24 horas, entre em contato com nosso suporte.</p>
+      <div class="flex flex-col gap-2 mt-4">
+        <a href="https://wa.me/5591992642917" target="_blank" class="text-center btn-ghost py-2.5 rounded-xl text-sm">💬 Falar com o suporte</a>
+        <button onclick="ocultarCardGrupo()" class="text-center btn-primary py-2.5 rounded-xl text-sm">✅ Já fui adicionado ao grupo</button>
+      </div>
+    </div>
+    <div id="grupoLiberado" class="hidden text-center">
+      <p class="text-green-400 font-semibold">🟢 Você já faz parte do Grupo VIP.</p>
+      <p class="text-gray-400 text-sm mt-1">Bom proveito!</p>
+    </div>
+  </div>
+  <p id="grupoOcultadoMsg" class="hidden text-xs text-gray-500 mb-6">Aviso ocultado. Se precisar, é só falar com o suporte.</p>
+
+  <div class="flex flex-col gap-3">
+    <button id="btnRenovar" onclick="abrirModalRenovacao()" class="hidden btn-primary py-3 rounded-xl">Renovar assinatura</button>
+    <a href="https://wa.me/5591992642917" target="_blank" class="text-center btn-ghost py-3 rounded-xl">Falar com suporte</a>
+  </div>
+</div>
+
+<!-- MODAL RENOVAÇÃO PIX -->
+<div id="pixModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center px-4" style="background:rgba(0,0,0,0.7)">
+  <div class="glass rounded-2xl p-7 max-w-sm w-full relative">
+    <button onclick="fecharModalPix()" class="absolute top-4 right-4 text-gray-400 hover:text-white">✕</button>
+
+    <div id="pixEtapaCpf">
+      <h3 class="text-lg font-bold mb-1">Renovar assinatura</h3>
+      <p class="text-gray-400 text-sm mb-5">Confirme seu CPF para gerar o Pix. Exigido pelo Mercado Pago.</p>
+      <form id="pixForm" class="space-y-3">
+        <input required id="pixCpf" type="text" placeholder="CPF (somente números)" maxlength="14" class="w-full rounded-lg px-4 py-3">
+        <p id="pixErro" class="text-red-400 text-sm hidden"></p>
+        <button type="submit" id="btnGerarPix" class="w-full btn-primary py-3 rounded-xl">Gerar Pix — R$ 19,99</button>
+      </form>
+    </div>
+
+    <div id="pixEtapaQr" class="hidden text-center">
+      <h3 class="text-lg font-bold mb-1">Pague com Pix</h3>
+      <p class="text-gray-400 text-sm mb-4">Escaneie o QR Code ou copie o código abaixo.</p>
+      <img id="pixQrImg" class="w-48 h-48 mx-auto rounded-lg bg-white p-2 mb-4" />
+      <textarea id="pixCodigo" readonly rows="3" class="w-full rounded-lg px-3 py-2 text-[11px] text-gray-300 mb-3 resize-none"></textarea>
+      <button onclick="copiarPix()" id="btnCopiarPix" class="w-full btn-primary py-2.5 rounded-xl text-sm mb-4">Copiar código</button>
+      <div class="flex items-center justify-center gap-2 text-xs text-gray-400">
+        <div class="animate-spin h-3 w-3 border-2 border-green-500 border-t-transparent rounded-full"></div>
+        Aguardando confirmação do pagamento...
+      </div>
+    </div>
+
+    <div id="pixEtapaOk" class="hidden text-center">
+      <svg class="check-circle mx-auto mb-3" width="60" height="60" viewBox="0 0 72 72">
+        <circle cx="36" cy="36" r="34" fill="rgba(34,197,94,0.15)" stroke="#22c55e" stroke-width="2"/>
+        <path class="check-path" d="M22 37 L32 47 L50 27" fill="none" stroke="#22c55e" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <h3 class="text-lg font-bold mb-1 text-green-400">Renovação confirmada!</h3>
+      <p class="text-gray-400 text-sm">Sua assinatura foi renovada por mais 30 dias.</p>
+    </div>
+  </div>
+
+<div id="semAssinatura" class="hidden max-w-lg mx-auto text-center glass rounded-2xl p-8">
+  <h2 class="text-xl font-bold mb-2">Nenhuma assinatura encontrada</h2>
+  <p class="text-gray-400 text-sm mb-6">Não encontramos uma assinatura vinculada a esse e-mail.</p>
+  <a href="index.html#planos" class="btn-primary inline-block px-6 py-3 rounded-xl">Ver planos</a>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://hsovtpkkavfntpzjaohj.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_XCktN6JWnRCEokixvx8CdA_7Ox12YU3';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function fmtData(iso){
+  if(!iso) return '—';
+  return new Date(iso).toLocaleDateString('pt-BR');
+}
+
+async function sair(){ await sb.auth.signOut(); window.location.href = 'login.html'; }
+
+async function carregar(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session){ window.location.href = 'login.html'; return; }
+
+  document.getElementById('nomeUsuario').textContent = session.user.user_metadata?.nome || session.user.email.split('@')[0];
+
+  try{
+    const res = await fetch('/api/minha-assinatura', {
+      headers: { 'Authorization': `Bearer ${session.access_token}` }
+    });
+    if(res.status === 404){
+      document.getElementById('loading').classList.add('hidden');
+      document.getElementById('semAssinatura').classList.remove('hidden');
+      return;
+    }
+    const c = await res.json();
+    renderAssinatura(c);
+  }catch(err){
+    document.getElementById('loading').classList.add('hidden');
+    document.getElementById('semAssinatura').classList.remove('hidden');
+  }
+}
+
+function renderAssinatura(c){
+  document.getElementById('loading').classList.add('hidden');
+  document.getElementById('painel').classList.remove('hidden');
+
+  document.getElementById('dataContratacao').textContent = fmtData(c.created_at);
+  document.getElementById('dataVencimento').textContent = fmtData(c.expires_at);
+
+  const pill = document.getElementById('statusPill');
+  const diasLabel = document.getElementById('diasRestantesLabel');
+  const diasNum = document.getElementById('diasRestantesNum');
+  const fill = document.getElementById('progressFill');
+  const alerta = document.getElementById('alertaAssinatura');
+
+  if(c.status !== 'acesso_liberado' && c.subscription_status !== 'ativa'){
+    pill.textContent = 'Aguardando aprovação';
+    pill.className = 'status-pill st-aguardando';
+  } else if(c.dias_restantes !== null && c.dias_restantes <= 0){
+    pill.textContent = 'Assinatura vencida';
+    pill.className = 'status-pill st-vencida';
+  } else {
+    pill.textContent = 'Aprovado';
+    pill.className = 'status-pill st-ativa';
+  }
+
+  const btnRenovar = document.getElementById('btnRenovar');
+  if(c.dias_restantes !== null && c.dias_restantes <= 0){
+    btnRenovar.classList.remove('hidden');
+  } else {
+    btnRenovar.classList.add('hidden');
+  }
+
+  if(c.dias_restantes !== null){
+    diasLabel.textContent = c.dias_restantes > 0 ? 'Dias restantes' : 'Assinatura vencida';
+    diasNum.textContent = c.dias_restantes > 0 ? `${c.dias_restantes} dias` : '0 dias';
+    const pct = Math.max(0, Math.min(100, (c.dias_restantes / 30) * 100));
+    fill.style.width = pct + '%';
+
+    if(c.dias_restantes <= 0){
+      alerta.className = 'rounded-xl p-4 mb-6 text-sm bg-red-500/10 border border-red-500/25 text-red-300';
+      alerta.textContent = 'Sua assinatura expirou. Renove para continuar recebendo nossos palpites.';
+      alerta.classList.remove('hidden');
+    } else if(c.dias_restantes <= 3){
+      alerta.className = 'rounded-xl p-4 mb-6 text-sm bg-red-500/10 border border-red-500/25 text-red-300';
+      alerta.textContent = `Sua assinatura expira em ${c.dias_restantes} dias. Renove para continuar recebendo nossos palpites.`;
+      alerta.classList.remove('hidden');
+    } else if(c.dias_restantes <= 7){
+      alerta.className = 'rounded-xl p-4 mb-6 text-sm bg-yellow-500/10 border border-yellow-500/25 text-yellow-300';
+      alerta.textContent = `Sua assinatura expira em ${c.dias_restantes} dias.`;
+      alerta.classList.remove('hidden');
+    }
+  }
+
+  renderCardGrupo(c);
+}
+
+function renderCardGrupo(c){
+  const cardId = `grupoOcultado_${c.id}`;
+  if(localStorage.getItem(cardId)){
+    document.getElementById('grupoOcultadoMsg').classList.remove('hidden');
+    return;
+  }
+  const card = document.getElementById('cardGrupo');
+  card.classList.remove('hidden');
+  if(c.status === 'acesso_liberado'){
+    document.getElementById('grupoLiberado').classList.remove('hidden');
+    document.getElementById('grupoAguardando').classList.add('hidden');
+  } else {
+    document.getElementById('grupoAguardando').classList.remove('hidden');
+    document.getElementById('grupoLiberado').classList.add('hidden');
+    const referencia = c.last_payment_at || c.created_at;
+    if(referencia){
+      const horasDesde = (Date.now() - new Date(referencia).getTime()) / (1000 * 60 * 60);
+      if(horasDesde > 24) document.getElementById('grupoAtrasoMsg').classList.remove('hidden');
+    }
+  }
+  window.__clienteAtual = c;
+}
+
+function ocultarCardGrupo(){
+  const c = window.__clienteAtual;
+  if(c) localStorage.setItem(`grupoOcultado_${c.id}`, '1');
+  document.getElementById('cardGrupo').classList.add('hidden');
+  document.getElementById('grupoOcultadoMsg').classList.remove('hidden');
+}
+
+let pixPollInterval = null;
+
+function abrirModalRenovacao(){
+  document.getElementById('pixModal').classList.remove('hidden');
+  document.getElementById('pixEtapaCpf').classList.remove('hidden');
+  document.getElementById('pixEtapaQr').classList.add('hidden');
+  document.getElementById('pixEtapaOk').classList.add('hidden');
+}
+
+function fecharModalPix(){
+  document.getElementById('pixModal').classList.add('hidden');
+  if(pixPollInterval) clearInterval(pixPollInterval);
+}
+
+document.getElementById('pixForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const btn = document.getElementById('btnGerarPix');
+  const erro = document.getElementById('pixErro');
+  erro.classList.add('hidden');
+  btn.disabled = true; btn.textContent = 'Gerando Pix...';
+
+  const cpf = document.getElementById('pixCpf').value;
+  const { data:{ session } } = await sb.auth.getSession();
+
+  try{
+    const res = await fetch('/api/renovar-pix', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization': `Bearer ${session.access_token}` },
+      body: JSON.stringify({ cpf })
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Erro ao gerar Pix');
+
+    document.getElementById('pixQrImg').src = `data:image/png;base64,${data.qr_code_base64}`;
+    document.getElementById('pixCodigo').value = data.qr_code;
+    document.getElementById('pixEtapaCpf').classList.add('hidden');
+    document.getElementById('pixEtapaQr').classList.remove('hidden');
+
+    pixPollInterval = setInterval(()=>checarStatusRenovacao(data.payment_id), 3000);
+  }catch(err){
+    erro.textContent = err.message;
+    erro.classList.remove('hidden');
+    btn.disabled = false; btn.textContent = 'Gerar Pix — R$ 19,99';
+  }
+});
+
+async function checarStatusRenovacao(paymentId){
+  try{
+    const res = await fetch(`/api/status-pagamento?payment_id=${paymentId}`);
+    const data = await res.json();
+    if(data.status === 'approved'){
+      clearInterval(pixPollInterval);
+      document.getElementById('pixEtapaQr').classList.add('hidden');
+      document.getElementById('pixEtapaOk').classList.remove('hidden');
+      setTimeout(()=>{
+        document.getElementById('pixModal').classList.add('hidden');
+        document.getElementById('loading').classList.remove('hidden');
+        document.getElementById('painel').classList.add('hidden');
+        carregar();
+      }, 1800);
+    }
+  }catch(err){ /* segue tentando no próximo intervalo */ }
+}
+
+function copiarPix(){
+  const campo = document.getElementById('pixCodigo');
+  navigator.clipboard.writeText(campo.value);
+  const btn = document.getElementById('btnCopiarPix');
+  btn.textContent = 'Código copiado!';
+  setTimeout(()=>{ btn.textContent = 'Copiar código'; }, 1500);
+}
+
+carregar();
+</script>
+</body>
+</html>

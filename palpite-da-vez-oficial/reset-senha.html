@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nova senha — Palpite da Vez</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--bg:#07100c;--green:#22c55e;--line:rgba(255,255,255,0.08)}
+  body{background:var(--bg);color:#f3f5f4;font-family:'Inter',system-ui,-apple-system,sans-serif}
+  .glass{background:rgba(255,255,255,0.035);backdrop-filter:blur(16px);border:1px solid var(--line)}
+  input{background:rgba(255,255,255,0.05);border:1px solid var(--line)}
+  input:focus{outline:none;border-color:var(--green)}
+  .btn-primary{background:var(--green);color:#04150a;font-weight:700}
+</style>
+</head>
+<body class="min-h-screen flex items-center justify-center px-6 py-16">
+<div class="max-w-sm w-full glass rounded-2xl p-8">
+  <h1 class="text-xl font-bold mb-1">Criar nova senha</h1>
+  <p class="text-gray-400 text-sm mb-6">Digite sua nova senha de acesso.</p>
+  <form id="form" class="space-y-4">
+    <input required id="senha" type="password" placeholder="Nova senha" minlength="6" class="w-full rounded-lg px-4 py-3 text-white">
+    <p id="erro" class="text-red-400 text-sm hidden"></p>
+    <button type="submit" id="btn" class="w-full btn-primary py-3 rounded-xl">Salvar nova senha</button>
+  </form>
+  <p id="ok" class="hidden text-green-400 text-sm mt-4 text-center">Senha alterada! <a href="login.html" class="underline">Ir para login</a></p>
+</div>
+<script>
+const SUPABASE_URL = 'https://hsovtpkkavfntpzjaohj.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_XCktN6JWnRCEokixvx8CdA_7Ox12YU3';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+document.getElementById('form').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const btn = document.getElementById('btn');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  const senha = document.getElementById('senha').value;
+  const { error } = await sb.auth.updateUser({ password: senha });
+  if(error){
+    document.getElementById('erro').textContent = 'Não foi possível alterar a senha. O link pode ter expirado.';
+    document.getElementById('erro').classList.remove('hidden');
+    btn.disabled = false; btn.textContent = 'Salvar nova senha';
+    return;
+  }
+  document.getElementById('form').classList.add('hidden');
+  document.getElementById('ok').classList.remove('hidden');
+});
+</script>
+</body>
+</html>

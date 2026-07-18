@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Palpite da Vez — Grupo VIP de Palpites</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#07100c; --bg-soft:#0c1712; --panel:rgba(255,255,255,0.035);
+    --line:rgba(255,255,255,0.08); --green:#22c55e; --green-soft:rgba(34,197,94,0.15);
+    --gold:#e8c46a; --text:#f3f5f4; --muted:#8b9994;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+  .glass{background:var(--panel);backdrop-filter:blur(16px);border:1px solid var(--line)}
+  .grad-bg{background:radial-gradient(ellipse 60% 50% at 50% 0%, rgba(34,197,94,0.12), transparent)}
+  .fade-up{animation:fadeUp .7s cubic-bezier(.16,1,.3,1) both}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  .vip-card{background:linear-gradient(180deg, rgba(34,197,94,0.09), rgba(255,255,255,0.02));border:1px solid rgba(34,197,94,0.35)}
+  .btn-primary{background:var(--green);color:#04150a;font-weight:700;transition:.2s ease}
+  .btn-primary:hover{background:#3fdc7a;transform:translateY(-1px)}
+  .btn-ghost{border:1px solid var(--line);color:var(--text);transition:.2s ease}
+  .btn-ghost:hover{border-color:var(--green);color:var(--green)}
+  .gold{color:var(--gold)}
+  .badge-launch{background:linear-gradient(90deg,#e8c46a,#c9a34e);color:#1a1206}
+  ::selection{background:var(--green);color:#04150a}
+  .price-old{text-decoration:line-through;color:var(--muted)}
+  input{background:rgba(255,255,255,0.05);border:1px solid var(--line);color:var(--text);transition:.2s}
+  input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(34,197,94,0.12)}
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- HEADER -->
+<header class="fixed top-0 w-full z-50 glass">
+  <div class="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
+    <div class="flex items-center gap-2 font-bold text-lg tracking-tight">
+      <span class="gold">👑</span> Palpite<span class="text-green-400">DaVez</span>
+    </div>
+    <nav class="hidden md:flex gap-8 text-sm text-gray-300">
+      <a href="#inicio" class="hover:text-green-400 transition">Início</a>
+      <a href="#planos" class="hover:text-green-400 transition">Planos</a>
+      <a href="#faq" class="hover:text-green-400 transition">Dúvidas</a>
+    </nav>
+    <div id="authArea" class="text-sm">
+      <a href="login.html" class="btn-ghost px-4 py-2 rounded-lg">Você já é VIP? <span class="text-green-400">Entrar</span></a>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section id="inicio" class="min-h-screen flex items-center justify-center px-6 pt-24 relative overflow-hidden grad-bg">
+  <div class="text-center max-w-3xl fade-up relative z-10">
+    <span class="inline-block px-4 py-1.5 rounded-full glass text-green-400 text-xs font-medium mb-6 tracking-wide">VAGAS LIMITADAS NO GRUPO VIP</span>
+    <h1 class="text-4xl md:text-6xl font-extrabold leading-[1.1] mb-6 tracking-tight">
+      Transforme suas apostas em <span class="text-green-400">resultados consistentes</span>
+    </h1>
+    <p class="text-gray-400 text-lg mb-10 max-w-xl mx-auto">Palpites diários, gestão de banca e análises estatísticas — direto no seu WhatsApp.</p>
+    <a href="#planos" class="inline-block btn-primary px-8 py-4 rounded-xl text-base">Ver planos</a>
+  </div>
+</section>
+
+<!-- COMO FUNCIONA -->
+<section class="py-20 px-6 max-w-6xl mx-auto">
+  <h2 class="text-2xl md:text-3xl font-bold text-center mb-12 tracking-tight">Como funciona</h2>
+  <div class="grid md:grid-cols-3 gap-5">
+    <div class="glass rounded-2xl p-7">
+      <div class="w-9 h-9 rounded-lg bg-green-500/15 text-green-400 flex items-center justify-center font-bold mb-4">1</div>
+      <h3 class="font-semibold mb-2">Escolha seu plano</h3>
+      <p class="text-gray-400 text-sm leading-relaxed">Comece grátis ou assine o VIP para acesso completo às análises diárias.</p>
+    </div>
+    <div class="glass rounded-2xl p-7">
+      <div class="w-9 h-9 rounded-lg bg-green-500/15 text-green-400 flex items-center justify-center font-bold mb-4">2</div>
+      <h3 class="font-semibold mb-2">Cadastre seu WhatsApp</h3>
+      <p class="text-gray-400 text-sm leading-relaxed">É por ele que você entra no grupo e recebe os palpites em tempo real.</p>
+    </div>
+    <div class="glass rounded-2xl p-7">
+      <div class="w-9 h-9 rounded-lg bg-green-500/15 text-green-400 flex items-center justify-center font-bold mb-4">3</div>
+      <h3 class="font-semibold mb-2">Receba os palpites</h3>
+      <p class="text-gray-400 text-sm leading-relaxed">Análises com estratégia, gestão de banca e suporte direto com a equipe.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PLANOS -->
+<section id="planos" class="py-20 px-6 max-w-5xl mx-auto">
+  <h2 class="text-2xl md:text-3xl font-bold text-center mb-3 tracking-tight">Escolha seu plano</h2>
+  <p class="text-center text-gray-500 text-sm mb-14">Cancele quando quiser. Sem fidelidade.</p>
+  <div class="grid md:grid-cols-2 gap-6">
+
+    <!-- GRATUITO -->
+    <div class="glass rounded-2xl p-8 flex flex-col">
+      <h3 class="text-lg font-semibold mb-1 text-gray-300">Gratuito</h3>
+      <p class="text-3xl font-extrabold mb-6">R$ 0</p>
+      <ul class="space-y-3 text-gray-400 text-sm mb-8 flex-1">
+        <li class="flex gap-2"><span class="text-green-400">✓</span> 1 palpite por dia</li>
+        <li class="flex gap-2"><span class="text-green-400">✓</span> Odds limitadas</li>
+        <li class="flex gap-2"><span class="text-green-400">✓</span> Conheça nosso trabalho</li>
+        <li class="flex gap-2"><span class="text-green-400">✓</span> Sem custo</li>
+      </ul>
+      <a href="https://chat.whatsapp.com/DIJRNUocy7H1nsmpQTlp1q?s=cl&p=a&ilr=0" target="_blank"
+         class="text-center btn-ghost font-semibold py-3 rounded-xl">
+        Entrar no Grupo Gratuito
+      </a>
+    </div>
+
+    <!-- VIP -->
+    <div class="vip-card rounded-2xl p-8 flex flex-col relative">
+      <span class="absolute -top-3 right-6 badge-launch text-xs font-bold px-3 py-1 rounded-full">Oferta de Lançamento</span>
+      <h3 class="text-lg font-semibold mb-1 text-green-400">VIP</h3>
+      <div class="flex items-baseline gap-2 mb-1">
+        <span class="price-old text-base">R$ 49,99</span>
+      </div>
+      <p class="text-3xl font-extrabold mb-6">R$ 19,99<span class="text-sm text-gray-400 font-normal">/mês</span></p>
+      <ul class="space-y-3 text-gray-300 text-sm mb-8 flex-1">
+        <li class="flex gap-2"><span class="text-green-400">✓</span> Todos os palpites do dia</li>
+        <li class="flex gap-2"><span class="text-green-400">✓</span> Odds premium</li>
+        <li class="flex gap-2"><span class="text-green-400">✓</span> Análises completas</li>
+        <li class="flex gap-2"><span class="text-green-400">✓</span> Gestão de banca</li>
+        <li class="flex gap-2"><span class="text-green-400">✓</span> Grupo VIP no WhatsApp</li>
+      </ul>
+      <button id="btnAssinar" onclick="abrirModalPix()" class="btn-primary py-3 rounded-xl">
+        Assinar Agora
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" class="py-20 px-6 max-w-3xl mx-auto">
+  <h2 class="text-2xl md:text-3xl font-bold text-center mb-12 tracking-tight">Perguntas frequentes</h2>
+  <div class="space-y-3">
+    <details class="glass rounded-xl p-5"><summary class="cursor-pointer font-medium">Como recebo os palpites?</summary><p class="text-gray-400 text-sm mt-3">Assim que seu pagamento é aprovado e o cadastro concluído, você é adicionado ao Grupo VIP no WhatsApp em até 24 horas.</p></details>
+    <details class="glass rounded-xl p-5"><summary class="cursor-pointer font-medium">Posso cancelar quando quiser?</summary><p class="text-gray-400 text-sm mt-3">Sim, a assinatura é mensal e sem fidelidade. Você continua com acesso até o fim do período já pago.</p></details>
+    <details class="glass rounded-xl p-5"><summary class="cursor-pointer font-medium">O pagamento é seguro?</summary><p class="text-gray-400 text-sm mt-3">Sim, processado integralmente pelo Mercado Pago, com criptografia de ponta a ponta.</p></details>
+  </div>
+</section>
+
+<!-- SEGURANCA -->
+<section class="py-14 px-6 text-center">
+  <div class="max-w-3xl mx-auto glass rounded-2xl p-6 flex flex-col md:flex-row items-center justify-center gap-3 text-sm text-gray-400">
+    <span class="text-green-400 font-semibold">Pagamento 100% seguro</span>
+    <span class="hidden md:inline text-gray-600">•</span>
+    <span>Processado via Mercado Pago</span>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="py-14 px-6 text-center text-gray-500 border-t border-white/5">
+  <p class="text-sm">Dúvidas? <a href="https://wa.me/5591992642917" target="_blank" class="text-green-400 hover:underline">Fale com o suporte</a></p>
+  <p class="text-xs mt-4 text-gray-600">© 2026 Palpite da Vez. Todos os direitos reservados.</p>
+</footer>
+
+<!-- MODAL PIX -->
+<div id="pixModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center px-4" style="background:rgba(0,0,0,0.7)">
+  <div class="glass rounded-2xl p-7 max-w-sm w-full relative">
+    <button onclick="fecharModalPix()" class="absolute top-4 right-4 text-gray-400 hover:text-white">✕</button>
+
+    <!-- etapa 1: dados -->
+    <div id="pixEtapaDados">
+      <h3 class="text-lg font-bold mb-1">Assinar VIP</h3>
+      <p class="text-gray-400 text-sm mb-5">Preencha seus dados para gerar o Pix. Exigido pelo Mercado Pago.</p>
+      <form id="pixForm" class="space-y-3">
+        <input required id="pixNome" type="text" placeholder="Nome completo" class="w-full rounded-lg px-4 py-3 text-white">
+        <input required id="pixEmail" type="email" placeholder="E-mail" class="w-full rounded-lg px-4 py-3 text-white">
+        <input required id="pixCpf" type="text" placeholder="CPF (somente números)" maxlength="14" class="w-full rounded-lg px-4 py-3 text-white">
+        <p id="pixErro" class="text-red-400 text-sm hidden"></p>
+        <button type="submit" id="btnGerarPix" class="w-full btn-primary py-3 rounded-xl">Gerar Pix — R$ 19,99</button>
+      </form>
+    </div>
+
+    <!-- etapa 2: qr code -->
+    <div id="pixEtapaQr" class="hidden text-center">
+      <h3 class="text-lg font-bold mb-1">Pague com Pix</h3>
+      <p class="text-gray-400 text-sm mb-4">Escaneie o QR Code ou copie o código abaixo.</p>
+      <img id="pixQrImg" class="w-48 h-48 mx-auto rounded-lg bg-white p-2 mb-4" />
+      <textarea id="pixCodigo" readonly rows="3" class="w-full rounded-lg px-3 py-2 text-[11px] text-gray-300 mb-3 resize-none"></textarea>
+      <button onclick="copiarPix()" id="btnCopiarPix" class="w-full btn-primary py-2.5 rounded-xl text-sm mb-4">Copiar código</button>
+      <div class="flex items-center justify-center gap-2 text-xs text-gray-400">
+        <div class="animate-spin h-3 w-3 border-2 border-green-500 border-t-transparent rounded-full"></div>
+        Aguardando confirmação do pagamento...
+      </div>
+    </div>
+
+    <!-- etapa 3: aprovado -->
+    <div id="pixEtapaOk" class="hidden text-center">
+      <div class="text-4xl mb-3">✅</div>
+      <h3 class="text-lg font-bold mb-1 text-green-400">Pagamento aprovado!</h3>
+      <p class="text-gray-400 text-sm mb-5">Redirecionando para concluir seu cadastro...</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ⚠️ PREENCHA com suas credenciais públicas do Supabase (Project Settings > API)
+const SUPABASE_URL = 'https://hsovtpkkavfntpzjaohj.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_XCktN6JWnRCEokixvx8CdA_7Ox12YU3';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function checkAuth(){
+  const { data:{ session } } = await sb.auth.getSession();
+  const authArea = document.getElementById('authArea');
+  if(session){
+    const nome = session.user.user_metadata?.nome || session.user.email.split('@')[0];
+    authArea.innerHTML = `
+      <div class="relative">
+        <button id="userBtn" class="btn-ghost px-4 py-2 rounded-lg flex items-center gap-2">Olá, ${nome} <span class="text-xs">▾</span></button>
+        <div id="userMenu" class="hidden absolute right-0 mt-2 w-56 glass rounded-xl p-2 text-sm">
+          <a href="area-assinante.html" class="block px-3 py-2 rounded-lg hover:bg-white/5">Minha assinatura</a>
+          <a href="area-assinante.html#renovar" class="block px-3 py-2 rounded-lg hover:bg-white/5">Renovar assinatura</a>
+          <a href="https://wa.me/5591992642917" target="_blank" class="block px-3 py-2 rounded-lg hover:bg-white/5">Suporte</a>
+          <button onclick="sair()" class="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 text-red-400">Sair</button>
+        </div>
+      </div>`;
+    document.getElementById('userBtn').onclick = ()=>document.getElementById('userMenu').classList.toggle('hidden');
+  }
+}
+async function sair(){ await sb.auth.signOut(); location.reload(); }
+checkAuth();
+
+let pixPollInterval = null;
+
+function abrirModalPix(){
+  document.getElementById('pixModal').classList.remove('hidden');
+  document.getElementById('pixEtapaDados').classList.remove('hidden');
+  document.getElementById('pixEtapaQr').classList.add('hidden');
+  document.getElementById('pixEtapaOk').classList.add('hidden');
+}
+
+function fecharModalPix(){
+  document.getElementById('pixModal').classList.add('hidden');
+  if(pixPollInterval) clearInterval(pixPollInterval);
+}
+
+document.getElementById('pixForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const btn = document.getElementById('btnGerarPix');
+  const erro = document.getElementById('pixErro');
+  erro.classList.add('hidden');
+  btn.disabled = true; btn.textContent = 'Gerando Pix...';
+
+  const nome = document.getElementById('pixNome').value;
+  const email = document.getElementById('pixEmail').value;
+  const cpf = document.getElementById('pixCpf').value;
+
+  try{
+    const res = await fetch('/api/criar-pix', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ nome, email, cpf })
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Erro ao gerar Pix');
+
+    // guarda pra usar depois do pagamento aprovado (etapa de WhatsApp/senha em obrigado.html)
+    localStorage.setItem('pdv_nome', nome);
+    localStorage.setItem('pdv_email', email);
+    localStorage.setItem('pdv_payment_id', data.payment_id);
+
+    document.getElementById('pixQrImg').src = `data:image/png;base64,${data.qr_code_base64}`;
+    document.getElementById('pixCodigo').value = data.qr_code;
+    document.getElementById('pixEtapaDados').classList.add('hidden');
+    document.getElementById('pixEtapaQr').classList.remove('hidden');
+
+    pixPollInterval = setInterval(()=>checarStatusPix(data.payment_id), 3000);
+  }catch(err){
+    erro.textContent = err.message;
+    erro.classList.remove('hidden');
+    btn.disabled = false; btn.textContent = 'Gerar Pix — R$ 19,99';
+  }
+});
+
+async function checarStatusPix(paymentId){
+  try{
+    const res = await fetch(`/api/status-pagamento?payment_id=${paymentId}`);
+    const data = await res.json();
+    if(data.status === 'approved'){
+      clearInterval(pixPollInterval);
+      document.getElementById('pixEtapaQr').classList.add('hidden');
+      document.getElementById('pixEtapaOk').classList.remove('hidden');
+      setTimeout(()=>{
+        window.location.href = `obrigado.html?payment_id=${paymentId}`;
+      }, 1200);
+    }
+  }catch(err){ /* segue tentando no próximo intervalo */ }
+}
+
+function copiarPix(){
+  const campo = document.getElementById('pixCodigo');
+  navigator.clipboard.writeText(campo.value);
+  const btn = document.getElementById('btnCopiarPix');
+  btn.textContent = 'Código copiado!';
+  setTimeout(()=>{ btn.textContent = 'Copiar código'; }, 1500);
+}
+
+// se a pessoa tem um pagamento em andamento (fechou o modal sem terminar), avisa e leva pro cadastro
+function checkPagamentoPendente(){
+  const paymentId = localStorage.getItem('pdv_payment_id');
+  if(!paymentId) return;
+  const banner = document.createElement('div');
+  banner.id = 'bannerPendente';
+  banner.className = 'fixed bottom-4 left-1/2 -translate-x-1/2 z-50 glass rounded-xl px-5 py-3 text-sm flex items-center gap-3';
+  banner.innerHTML = `
+    <span>Você tem um pagamento em processamento.</span>
+    <a href="obrigado.html?payment_id=${paymentId}" class="text-green-400 font-semibold hover:underline">Continuar →</a>
+    <button id="btnFecharPendente" class="text-gray-500 hover:text-red-400 ml-1 text-base leading-none">✕</button>`;
+  document.body.appendChild(banner);
+  document.getElementById('btnFecharPendente').onclick = () => abrirConfirmacaoDescartar();
+}
+
+function abrirConfirmacaoDescartar(){
+  const overlay = document.createElement('div');
+  overlay.id = 'confirmDescartar';
+  overlay.className = 'fixed inset-0 z-[70] flex items-center justify-center px-4';
+  overlay.style.background = 'rgba(0,0,0,0.7)';
+  overlay.innerHTML = `
+    <div class="glass rounded-2xl p-6 max-w-xs w-full text-center">
+      <p class="font-semibold mb-2">Descartar compra pendente?</p>
+      <p class="text-gray-400 text-sm mb-5">Você poderá iniciar uma nova compra quando quiser.</p>
+      <div class="flex flex-col gap-2">
+        <button id="btnConfirmarDescarte" class="btn-primary py-2.5 rounded-xl text-sm">Cancelar compra</button>
+        <button id="btnVoltarDescarte" class="btn-ghost py-2.5 rounded-xl text-sm">Voltar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  document.getElementById('btnVoltarDescarte').onclick = () => overlay.remove();
+  document.getElementById('btnConfirmarDescarte').onclick = () => {
+    localStorage.removeItem('pdv_nome');
+    localStorage.removeItem('pdv_email');
+    localStorage.removeItem('pdv_payment_id');
+    overlay.remove();
+    document.getElementById('bannerPendente')?.remove();
+  };
+}
+function checkCookieBanner(){
+  if(localStorage.getItem('pdv_cookie_consent')) return;
+  const banner = document.createElement('div');
+  banner.id = 'cookieBanner';
+  banner.className = 'fixed bottom-0 left-0 right-0 z-[80] glass border-t px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-3 text-sm fade-in';
+  banner.innerHTML = `
+    <p class="text-gray-300">Usamos cookies para melhorar sua experiência no site.</p>
+    <div class="flex gap-2">
+      <button id="cookieRecusar" class="btn-ghost px-4 py-2 rounded-lg text-xs">Recusar</button>
+      <button id="cookieAceitar" class="btn-primary px-4 py-2 rounded-lg text-xs">Aceitar</button>
+    </div>`;
+  document.body.appendChild(banner);
+  const fechar = valor => { localStorage.setItem('pdv_cookie_consent', valor); banner.remove(); };
+  document.getElementById('cookieAceitar').onclick = () => fechar('aceito');
+  document.getElementById('cookieRecusar').onclick = () => fechar('recusado');
+}
+checkCookieBanner();
+checkPagamentoPendente();
+</script>
+</body>
+</html>

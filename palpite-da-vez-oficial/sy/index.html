@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel — Palpite da Vez</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{--bg:#07100c;--green:#22c55e;--line:rgba(255,255,255,0.08);--gold:#e8c46a}
+  body{background:var(--bg);color:#f3f5f4;font-family:'Inter',system-ui,-apple-system,sans-serif}
+  .glass{background:rgba(255,255,255,0.035);backdrop-filter:blur(16px);border:1px solid var(--line)}
+  input,select{background:rgba(255,255,255,0.05);border:1px solid var(--line);color:#f3f5f4}
+  input:focus,select:focus{outline:none;border-color:var(--green)}
+  .btn-primary{background:var(--green);color:#04150a;font-weight:700;transition:.2s}
+  .btn-primary:hover{background:#3fdc7a}
+  th{text-align:left;color:#8b9994;font-weight:600;font-size:.7rem;text-transform:uppercase;letter-spacing:.03em}
+  td,th{padding:.85rem 1rem}
+  tr{border-bottom:1px solid rgba(255,255,255,0.05)}
+  tr:hover td{background:rgba(255,255,255,0.02)}
+  .kpi{background:rgba(255,255,255,0.035);border:1px solid var(--line);border-radius:1rem;padding:1.25rem}
+  .status-pill{font-size:.7rem;font-weight:600;padding:.3rem .7rem;border-radius:99px}
+  .st-liberado{background:rgba(34,197,94,0.15);color:#4ade80}
+  .st-pendente{background:rgba(234,179,8,0.15);color:#facc15}
+</style>
+</head>
+<body class="min-h-screen px-6 py-16">
+
+<div id="loginArea" class="max-w-sm mx-auto glass rounded-2xl p-8 mt-24">
+  <h1 class="text-xl font-bold mb-1 text-center">Acesso restrito</h1>
+  <p class="text-gray-400 text-sm mb-6 text-center">Painel administrativo</p>
+  <label class="text-xs text-gray-400">Chave de acesso</label>
+  <input id="chave" type="password" class="w-full rounded-lg px-4 py-3 mt-1 mb-2">
+  <p id="loginErro" class="text-red-400 text-sm mb-4 hidden">Chave inválida.</p>
+  <button onclick="entrar()" class="w-full btn-primary py-3 rounded-xl">Entrar</button>
+</div>
+
+<div id="painel" class="hidden max-w-6xl mx-auto">
+  <div class="flex items-center justify-between mb-8">
+    <h1 class="text-2xl font-bold">Dashboard <span class="text-green-400">VIP</span></h1>
+    <div class="glass rounded-xl px-5 py-3 text-sm">Clientes: <span id="totalClientes" class="font-bold text-green-400">0</span></div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+    <div class="kpi">
+      <p class="text-xs text-gray-400 mb-1">Assinaturas ativas</p>
+      <p id="kpiAtivas" class="text-2xl font-bold text-green-400">0</p>
+    </div>
+    <div class="kpi">
+      <p class="text-xs text-gray-400 mb-1">Assinaturas vencidas</p>
+      <p id="kpiVencidas" class="text-2xl font-bold text-red-400">0</p>
+    </div>
+    <div class="kpi">
+      <p class="text-xs text-gray-400 mb-1">Receita do mês</p>
+      <p id="kpiReceitaMes" class="text-2xl font-bold">R$ 0</p>
+    </div>
+    <div class="kpi">
+      <p class="text-xs text-gray-400 mb-1">Receita total</p>
+      <p id="kpiReceitaTotal" class="text-2xl font-bold">R$ 0</p>
+    </div>
+    <div class="kpi">
+      <p class="text-xs text-gray-400 mb-1">Líquido estimado (pós-taxa)</p>
+      <p id="kpiReceitaLiquida" class="text-2xl font-bold text-green-400">R$ 0</p>
+      <p class="text-[10px] text-gray-500 mt-1">Estimativa com taxa Pix de 0,99%*</p>
+    </div>
+  </div>
+
+  <!-- Próximos vencimentos -->
+  <div class="glass rounded-2xl p-5 mb-8">
+    <p class="text-xs text-gray-400 mb-3 uppercase tracking-wide">Próximos vencimentos (7 dias)</p>
+    <div id="proximosVencimentos" class="text-sm text-gray-300">Nenhum vencimento próximo.</div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="flex flex-col md:flex-row gap-3 mb-4">
+    <input id="busca" type="text" placeholder="Buscar por nome, e-mail ou WhatsApp..." class="flex-1 rounded-lg px-4 py-2.5 text-sm" oninput="aplicarFiltros()">
+    <select id="filtroStatus" class="rounded-lg px-4 py-2.5 text-sm" onchange="aplicarFiltros()">
+      <option value="">Todos os status</option>
+      <option value="acesso_liberado">Acesso liberado</option>
+      <option value="pago">Pendente de liberação</option>
+    </select>
+  </div>
+
+  <div class="glass rounded-2xl overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead><tr>
+        <th>Nome</th><th>Email</th><th>WhatsApp</th><th>Valor</th><th>Status</th><th>Vencimento</th><th>Data</th><th></th>
+      </tr></thead>
+      <tbody id="tabelaBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+let ADMIN_KEY = '';
+let TODOS_CLIENTES = [];
+
+async function entrar(){
+  const btnEntrar = document.querySelector('#loginArea button');
+  btnEntrar.disabled = true; btnEntrar.textContent = 'Entrando...';
+  const chave = document.getElementById('chave').value;
+  const res = await fetch('/api/admin-clientes', { headers: { 'x-admin-key': chave } });
+  if(res.status === 401){
+    btnEntrar.disabled = false; btnEntrar.textContent = 'Entrar';
+    document.getElementById('loginErro').classList.remove('hidden');
+    return;
+  }
+  ADMIN_KEY = chave;
+  const data = await res.json();
+  document.getElementById('loginArea').classList.add('hidden');
+  document.getElementById('painel').classList.remove('hidden');
+  TODOS_CLIENTES = data.clientes || [];
+  renderKPIs(TODOS_CLIENTES);
+  aplicarFiltros();
+}
+
+function renderKPIs(clientes){
+  document.getElementById('totalClientes').textContent = clientes.length;
+
+  const agora = new Date();
+  const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
+
+  let ativas = 0, vencidas = 0, receitaMes = 0, receitaTotal = 0;
+  const proximos = [];
+
+  clientes.forEach(c => {
+    const valor = Number(c.valor || 0);
+    receitaTotal += valor;
+
+    if(c.created_at && new Date(c.created_at) >= inicioMes){
+      receitaMes += valor;
+    }
+
+    if(c.expires_at){
+      const venc = new Date(c.expires_at);
+      const diasRestantes = Math.ceil((venc - agora) / (1000*60*60*24));
+      if(diasRestantes > 0){
+        ativas++;
+        if(diasRestantes <= 7) proximos.push({ nome: c.nome || c.email || '—', dias: diasRestantes, data: venc });
+      } else {
+        vencidas++;
+      }
+    }
+  });
+
+  document.getElementById('kpiAtivas').textContent = ativas;
+  document.getElementById('kpiVencidas').textContent = vencidas;
+  document.getElementById('kpiReceitaMes').textContent = 'R$ ' + receitaMes.toFixed(2);
+  document.getElementById('kpiReceitaTotal').textContent = 'R$ ' + receitaTotal.toFixed(2);
+  const TAXA_PIX_ESTIMADA = 0.0099; // ajuste conforme a taxa real da sua conta Mercado Pago
+  document.getElementById('kpiReceitaLiquida').textContent = 'R$ ' + (receitaTotal * (1 - TAXA_PIX_ESTIMADA)).toFixed(2);
+
+  const proxEl = document.getElementById('proximosVencimentos');
+  if(proximos.length === 0){
+    proxEl.textContent = 'Nenhum vencimento próximo.';
+  } else {
+    proximos.sort((a,b)=>a.dias-b.dias);
+    proxEl.innerHTML = proximos.map(p => `
+      <div class="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
+        <span>${p.nome}</span>
+        <span class="text-yellow-400 text-xs">${p.dias} dia(s) — ${p.data.toLocaleDateString('pt-BR')}</span>
+      </div>`).join('');
+  }
+}
+
+function aplicarFiltros(){
+  const busca = document.getElementById('busca').value.toLowerCase();
+  const filtroStatus = document.getElementById('filtroStatus').value;
+
+  const filtrados = TODOS_CLIENTES.filter(c => {
+    const matchBusca = !busca ||
+      (c.nome || '').toLowerCase().includes(busca) ||
+      (c.email || '').toLowerCase().includes(busca) ||
+      (c.whatsapp || '').toLowerCase().includes(busca);
+    const matchStatus = !filtroStatus || c.status === filtroStatus;
+    return matchBusca && matchStatus;
+  });
+
+  render(filtrados);
+}
+
+function render(clientes){
+  const body = document.getElementById('tabelaBody');
+  body.innerHTML = clientes.map(c => `
+    <tr>
+      <td>${c.nome || '-'}</td>
+      <td>${c.email || '-'}</td>
+      <td>${c.whatsapp || '-'}</td>
+      <td>R$ ${Number(c.valor || 0).toFixed(2)}</td>
+      <td><span class="status-pill ${c.status==='acesso_liberado' ? 'st-liberado' : 'st-pendente'}">${c.status==='acesso_liberado' ? 'Liberado' : 'Pendente'}</span></td>
+      <td class="text-xs text-gray-400">${c.expires_at ? new Date(c.expires_at).toLocaleDateString('pt-BR') : '-'}</td>
+      <td class="text-xs text-gray-400">${c.created_at ? new Date(c.created_at).toLocaleDateString('pt-BR') : '-'}</td>
+      <td>${c.status !== 'acesso_liberado' ? `<button onclick="liberar('${c.id}')" class="text-green-400 hover:underline text-xs">Liberar acesso</button>` : ''}</td>
+    </tr>
+  `).join('');
+}
+
+async function liberar(id){
+  event.target.disabled = true; event.target.textContent = 'Liberando...';
+  await fetch('/api/admin-liberar', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-admin-key':ADMIN_KEY},
+    body: JSON.stringify({ id })
+  });
+  const res = await fetch('/api/admin-clientes', { headers: { 'x-admin-key': ADMIN_KEY } });
+  const data = await res.json();
+  TODOS_CLIENTES = data.clientes || [];
+  renderKPIs(TODOS_CLIENTES);
+  aplicarFiltros();
+}
+</script>
+</body>
+</html>

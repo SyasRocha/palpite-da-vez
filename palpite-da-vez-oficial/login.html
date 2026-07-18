@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entrar — Palpite da Vez</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--bg:#07100c;--green:#22c55e;--line:rgba(255,255,255,0.08)}
+  body{background:var(--bg);color:#f3f5f4;font-family:'Inter',system-ui,-apple-system,sans-serif}
+  .glass{background:rgba(255,255,255,0.035);backdrop-filter:blur(16px);border:1px solid var(--line)}
+  input{background:rgba(255,255,255,0.05);border:1px solid var(--line);transition:.2s}
+  input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(34,197,94,0.12)}
+  .btn-primary{background:var(--green);color:#04150a;font-weight:700;transition:.2s}
+  .btn-primary:hover{background:#3fdc7a}
+  .btn-primary:disabled{opacity:.6}
+</style>
+</head>
+<body class="min-h-screen flex items-center justify-center px-6 py-16">
+
+<div class="max-w-sm w-full">
+  <div class="text-center mb-8">
+    <a href="index.html" class="font-bold text-xl">👑 Palpite<span class="text-green-400">DaVez</span></a>
+  </div>
+
+  <!-- LOGIN -->
+  <div id="loginBox" class="glass rounded-2xl p-8">
+    <h1 class="text-xl font-bold mb-1">Entrar</h1>
+    <p class="text-gray-400 text-sm mb-6">Acesse sua área de assinante VIP.</p>
+    <form id="loginForm" class="space-y-4">
+      <div>
+        <label class="text-xs text-gray-400">E-mail</label>
+        <input required id="email" type="email" class="w-full rounded-lg px-4 py-3 mt-1 text-white">
+      </div>
+      <div>
+        <label class="text-xs text-gray-400">Senha</label>
+        <input required id="senha" type="password" class="w-full rounded-lg px-4 py-3 mt-1 text-white">
+      </div>
+      <p id="loginErro" class="text-red-400 text-sm hidden"></p>
+      <button type="submit" id="btnLogin" class="w-full btn-primary py-3 rounded-xl">Entrar</button>
+    </form>
+    <button onclick="mostrar('recuperarBox')" class="text-gray-400 text-xs mt-4 hover:text-green-400 transition">Esqueci minha senha</button>
+    <p class="text-xs text-gray-500 mt-6 text-center">Ainda não é assinante? <a href="index.html#planos" class="text-green-400 hover:underline">Ver planos</a></p>
+  </div>
+
+  <!-- RECUPERAR SENHA -->
+  <div id="recuperarBox" class="glass rounded-2xl p-8 hidden">
+    <h1 class="text-xl font-bold mb-1">Recuperar senha</h1>
+    <p class="text-gray-400 text-sm mb-6">Enviaremos um link de redefinição para seu e-mail.</p>
+    <form id="recuperarForm" class="space-y-4">
+      <div>
+        <label class="text-xs text-gray-400">E-mail cadastrado</label>
+        <input required id="emailRecuperar" type="email" class="w-full rounded-lg px-4 py-3 mt-1 text-white">
+      </div>
+      <button type="submit" id="btnRecuperar" class="w-full btn-primary py-3 rounded-xl">Enviar link</button>
+    </form>
+    <button onclick="mostrar('loginBox')" class="text-gray-400 text-xs mt-4 hover:text-green-400 transition">← Voltar ao login</button>
+  </div>
+
+  <!-- CONFIRMACAO -->
+  <div id="enviadoBox" class="glass rounded-2xl p-8 text-center hidden">
+    <div class="text-4xl mb-4">✅</div>
+    <h2 class="text-lg font-bold mb-2">E-mail enviado</h2>
+    <p class="text-gray-400 text-sm mb-6">Verifique sua caixa de entrada e siga o link para criar uma nova senha.</p>
+    <button onclick="mostrar('loginBox')" class="btn-primary px-6 py-3 rounded-xl">Voltar ao login</button>
+  </div>
+</div>
+
+<script>
+// ⚠️ PREENCHA com suas credenciais públicas do Supabase (Project Settings > API)
+const SUPABASE_URL = 'https://hsovtpkkavfntpzjaohj.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_XCktN6JWnRCEokixvx8CdA_7Ox12YU3';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function mostrar(id){
+  ['loginBox','recuperarBox','enviadoBox'].forEach(b=>document.getElementById(b).classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+
+document.getElementById('loginForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const btn = document.getElementById('btnLogin');
+  const erro = document.getElementById('loginErro');
+  erro.classList.add('hidden');
+  btn.disabled = true; btn.textContent = 'Entrando...';
+
+  const email = document.getElementById('email').value;
+  const senha = document.getElementById('senha').value;
+  const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+
+  if(error){
+    erro.textContent = 'E-mail ou senha inválidos.';
+    erro.classList.remove('hidden');
+    btn.disabled = false; btn.textContent = 'Entrar';
+    return;
+  }
+  window.location.href = 'area-assinante.html';
+});
+
+document.getElementById('recuperarForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const btn = document.getElementById('btnRecuperar');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  const email = document.getElementById('emailRecuperar').value;
+  await sb.auth.resetPasswordForEmail(email, { redirectTo: 'https://palpitedavez.vercel.app/reset-senha.html' });
+  mostrar('enviadoBox');
+});
+</script>
+</body>
+</html>
