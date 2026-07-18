@@ -20,7 +20,7 @@ export default async function handler(req, res) {
         'X-Idempotency-Key': `pdv_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
       },
       body: JSON.stringify({
-        transaction_amount: 1.00,
+        transaction_amount: 19.99,
         description: 'Grupo VIP - Palpites Esportivos (Mensal)',
         payment_method_id: 'pix',
         payer: {
